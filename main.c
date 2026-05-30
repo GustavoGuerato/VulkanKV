@@ -61,11 +61,14 @@ int main(int argc, char *argv[])
                               sizeof(buffer) - 1,
                               0)) > 0)
     {
+      buffer[bytes_read] = '\0';
+
       char *cmd = strtok(buffer, " ");
       if (cmd == NULL)
       {
         continue;
       }
+
       char *key = strtok(NULL, " ");
       char *value = strtok(NULL, " ");
 
@@ -76,6 +79,7 @@ int main(int argc, char *argv[])
           send(client_sd, "ERROR\n", 6, 0);
           continue;
         }
+
         send(client_sd, "OK\n", 3, 0);
       }
       else if (strcmp(cmd, "PING") == 0)
@@ -89,21 +93,16 @@ int main(int argc, char *argv[])
           send(client_sd, "ERROR\n", 6, 0);
           continue;
         }
+
         send(client_sd, "NOT FOUND\n", 10, 0);
       }
-
-      printf("Received message: %s\n", buffer);
-
-      ssize_t bytes_sent =
-          send(client_sd, buffer, bytes_read, 0);
-
-      if (bytes_sent < 0)
+      else
       {
-        perror("send");
-        break;
+        send(client_sd, "UNKNOWN COMMAND\n", 16, 0);
       }
-    }
 
+      printf("Received message: %s\n", cmd);
+    }
     if (bytes_read < 0)
     {
       perror("recv");
@@ -115,4 +114,7 @@ int main(int argc, char *argv[])
 
     close(client_sd);
   }
+
+  close(server_sd);
+  return 0;
 }
