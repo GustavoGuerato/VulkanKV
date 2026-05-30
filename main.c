@@ -5,7 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-int main(void)
+
+int main(int argc, char *argv[])
 {
   int server_sd;
   int client_sd;
@@ -15,10 +16,15 @@ int main(void)
   socklen_t client_addr_len = sizeof(client_addr);
   memset(&client_addr, 0, client_addr_len);
   char buffer[1024];
+  struct kv_pair
+  {
+    char key[256];
+    char value[256];
+  };
 
   if ((server_sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf("Error to create socket\n");
+    perror("socket");
     exit(EXIT_FAILURE);
   }
 
@@ -28,7 +34,7 @@ int main(void)
 
   if (bind(server_sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    printf("Error to bind socket\n");
+    perror("bind");
     exit(EXIT_FAILURE);
   }
 
@@ -39,34 +45,56 @@ int main(void)
     return 1;
   }
   printf("Server is listening on port 8080\n");
-
-  client_sd = accept(server_sd, (struct sockaddr *)&client_addr, &client_addr_len);
-  if (client_sd < 0)
+  while (1)
   {
-    perror("accept");
-    close(server_sd);
-    return 1;
-  }
+    client_sd = accept(server_sd, (struct sockaddr *)&client_addr, &client_addr_len);
+    if (client_sd < 0)
+    {
+      perror("accept");
+      close(server_sd);
+      return 1;
+    }
+    ssize_t bytes_read;
+    printf("client connected\n");
+    while ((bytes_read = recv(client_sd,
+                              buffer,
+                              sizeof(buffer) - 1,
+                              0)) > 0)
+    {
+      char *cmd = strtok(buffer, " ");
+      if (cmd == NULL)
+      {
+        continue;
+      }
+      char *key = strtok(NULL, " ");
+      char *value = strtok(NULL, " ");
 
-  printf("client connected\n");
+      if (strncmp(cmd, "SET", 3) == 0)
+      {
+        send(client_sd, "OK\n", 3, 0);
+      }
 
-  ssize_t bytes_read = recv(client_sd, buffer, sizeof(buffer) - 1, 0);
-  if (bytes_read < 0)
-  {
-    perror("recv");
-  }
-  else if (bytes_read == 0)
-  {
-    printf("client disconnected\n");
-  }
-  else
-  {
-    buffer[bytes_read] = '\0';
-    printf("Received message: %s\n", buffer);
-  }
+      printf("Received message: %s\n", buffer);
 
-  recv(client_sd, buffer, sizeof(buffer) - 1, 0);
-  close(server_sd);
-  close(client_sd);
-  return 0;
+      ssize_t bytes_sent =
+          send(client_sd, buffer, bytes_read, 0);
+
+      if (bytes_sent < 0)
+      {
+        perror("send");
+        break;
+      }
+    }
+
+    if (bytes_read < 0)
+    {
+      perror("recv");
+    }
+    else if (bytes_read == 0)
+    {
+      printf("client disconnected\n");
+    }
+
+    close(client_sd);
+  }
 }
