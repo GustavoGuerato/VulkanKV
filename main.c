@@ -69,9 +69,27 @@ int main(int argc, char *argv[])
       char *key = strtok(NULL, " ");
       char *value = strtok(NULL, " ");
 
-      if (strncmp(cmd, "SET", 3) == 0)
+      if (strcmp(cmd, "SET") == 0)
       {
+        if (key == NULL || value == NULL)
+        {
+          send(client_sd, "ERROR\n", 6, 0);
+          continue;
+        }
         send(client_sd, "OK\n", 3, 0);
+      }
+      else if (strcmp(cmd, "PING") == 0)
+      {
+        send(client_sd, "PONG\n", 5, 0);
+      }
+      else if (strcmp(cmd, "GET") == 0)
+      {
+        if (key == NULL)
+        {
+          send(client_sd, "ERROR\n", 6, 0);
+          continue;
+        }
+        send(client_sd, "NOT FOUND\n", 10, 0);
       }
 
       printf("Received message: %s\n", buffer);
