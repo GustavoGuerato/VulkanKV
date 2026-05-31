@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 
 int main(int argc, char *argv[])
 {
@@ -62,13 +63,17 @@ int main(int argc, char *argv[])
                               0)) > 0)
     {
       buffer[bytes_read] = '\0';
+      buffer[strcspn(buffer, "\r\n")] = '\0';
 
       char *cmd = strtok(buffer, " ");
       if (cmd == NULL)
       {
         continue;
       }
-
+      for (int i = 0; cmd[i] != '\0'; i++)
+      {
+        cmd[i] = toupper(cmd[i]);
+      }
       char *key = strtok(NULL, " ");
       char *value = strtok(NULL, " ");
 
@@ -76,29 +81,31 @@ int main(int argc, char *argv[])
       {
         if (key == NULL || value == NULL)
         {
-          send(client_sd, "ERROR\n", 6, 0);
+          send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
           continue;
         }
 
-        send(client_sd, "OK\n", 3, 0);
+        send(client_sd, "OK\n", strlen("OK\n"), 0);
       }
+
       else if (strcmp(cmd, "PING") == 0)
       {
-        send(client_sd, "PONG\n", 5, 0);
+        send(client_sd, "PONG\n", strlen("PONG\n"), 0);
       }
+
       else if (strcmp(cmd, "GET") == 0)
       {
         if (key == NULL)
         {
-          send(client_sd, "ERROR\n", 6, 0);
+          send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
           continue;
         }
 
-        send(client_sd, "NOT FOUND\n", 10, 0);
+        send(client_sd, "NOT FOUND\n", strlen("NOT FOUND\n"), 0);
       }
       else
       {
-        send(client_sd, "UNKNOWN COMMAND\n", 16, 0);
+        send(client_sd, "UNKNOWN COMMAND\n", strlen("UNKNOWN COMMAND\n"), 0);
       }
 
       printf("Received message: %s\n", cmd);
