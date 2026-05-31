@@ -7,6 +7,19 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
+#define HASH_TABLE_SIZE 1024
+
+typedef struct kv_pair
+{
+  char key[256];
+  char value[256];
+  struct kv_pair *next;
+} kv_pair_t;
+
+typedef struct
+{
+  kv_pair_t *buckets[HASH_TABLE_SIZE];
+} hash_table_t;
 int main(int argc, char *argv[])
 {
   int server_sd;
@@ -17,7 +30,11 @@ int main(int argc, char *argv[])
   socklen_t client_addr_len = sizeof(client_addr);
   memset(&client_addr, 0, client_addr_len);
   char buffer[1024];
-  struct kv_pair
+  hash_table_t *hash_table = malloc(sizeof(hash_table_t));
+  for (int i = 0; i < HASH_TABLE_SIZE; i++)
+  {
+    hash_table->buckets[i] = NULL;
+  }
   {
     char key[256];
     char value[256];
