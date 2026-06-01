@@ -1,4 +1,6 @@
 #include "server.h"
+#include "protocol.h"
+#include "kv_store.h"
 
 int main()
 {
