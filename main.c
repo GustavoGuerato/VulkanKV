@@ -103,10 +103,7 @@ int main(int argc, char *argv[])
         {
           if (kv_count >= 100)
           {
-            send(client_sd,
-                 "ERROR: Store full\n",
-                 strlen("ERROR: Store full\n"),
-                 0);
+            send_error(client_sd, "Store full\n");
             continue;
           }
 
@@ -116,19 +113,19 @@ int main(int argc, char *argv[])
           kv_count++;
         }
 
-        send(client_sd, "OK\n", strlen("OK\n"), 0);
+        send_response(client_sd, "OK\n");
       }
 
       else if (strcmp(cmd, "PING") == 0)
       {
-        send(client_sd, "PONG\n", strlen("PONG\n"), 0);
+        send_response(client_sd, "PONG\n");
       }
 
       else if (strcmp(cmd, "GET") == 0)
       {
         if (key == NULL)
         {
-          send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
+          send_error(client_sd, "MISSING KEY\n");
           continue;
         }
 
@@ -157,10 +154,7 @@ int main(int argc, char *argv[])
 
         if (!found)
         {
-          send(client_sd,
-               "NOT FOUND\n",
-               strlen("NOT FOUND\n"),
-               0);
+          send_error(client_sd, "NOT FOUND\n");
         }
       }
       else if (strcmp(cmd, "DEL") == 0)
@@ -183,16 +177,16 @@ int main(int argc, char *argv[])
 
         if (found)
         {
-          send(client_sd, "OK\n", strlen("OK\n"), 0);
+          send_response(client_sd, "OK\n");
         }
         else
         {
-          send(client_sd, "NOT FOUND\n", strlen("NOT FOUND\n"), 0);
+          send_error(client_sd, "NOT FOUND\n");
         }
       }
       else
       {
-        send(client_sd, "UNKNOWN COMMAND\n", strlen("UNKNOWN COMMAND\n"), 0);
+        send_error(client_sd, "UNKNOWN COMMAND\n");
       }
 
       printf("Received message: %s\n", cmd);
@@ -211,4 +205,22 @@ int main(int argc, char *argv[])
 
   close(server_sd);
   return 0;
+}
+
+void send_response(int client_sd, const char *response)
+{
+  if (send(client_sd, response, strlen(response), 0) < 0)
+  {
+    perror("send");
+  }
+  else
+  {
+    printf("Sent response: %s", response);
+  }
+}
+void send_error(int client_sd, const char *error_message)
+{
+  char response[512];
+  snprintf(response, sizeof(response), "ERROR: %s\n", error_message);
+  send_response(client_sd, response);
 }
