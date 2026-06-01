@@ -7,19 +7,6 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
-#define HASH_TABLE_SIZE 1024
-
-typedef struct kv_pair
-{
-  char key[256];
-  char value[256];
-  struct kv_pair *next;
-} kv_pair_t;
-
-typedef struct
-{
-  kv_pair_t *buckets[HASH_TABLE_SIZE];
-} hash_table_t;
 int main(int argc, char *argv[])
 {
   int server_sd;
@@ -30,16 +17,14 @@ int main(int argc, char *argv[])
   socklen_t client_addr_len = sizeof(client_addr);
   memset(&client_addr, 0, client_addr_len);
   char buffer[1024];
-  hash_table_t *hash_table = malloc(sizeof(hash_table_t));
-  for (int i = 0; i < HASH_TABLE_SIZE; i++)
-  {
-    hash_table->buckets[i] = NULL;
-  }
+  struct kv_pair
   {
     char key[256];
     char value[256];
   };
 
+  struct kv_pair kv_store[100];
+  int kv_count = 0;
   if ((server_sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
     perror("socket");
@@ -102,6 +87,11 @@ int main(int argc, char *argv[])
           continue;
         }
 
+        strcpy(kv_store[kv_count].key, key);
+        strcpy(kv_store[kv_count].value, value);
+
+        kv_count++;
+
         send(client_sd, "OK\n", strlen("OK\n"), 0);
       }
 
@@ -112,6 +102,36 @@ int main(int argc, char *argv[])
 
       else if (strcmp(cmd, "GET") == 0)
       {
+        int found = 0;
+
+        for (int i = 0; i < kv_count; i++)
+        {
+          if (strcmp(kv_store[i].key, key) == 0)
+          {
+            char response[512];
+
+            snprintf(response,
+                     sizeof(response),
+                     "%s\n",
+                     kv_store[i].value);
+
+            send(client_sd,
+                 response,
+                 strlen(response),
+                 0);
+
+            found = 1;
+            break;
+          }
+        }
+
+        if (!found)
+        {
+          send(client_sd,
+               "NOT FOUND\n",
+               strlen("NOT FOUND\n"),
+               0);
+        }
         if (key == NULL)
         {
           send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
