@@ -87,10 +87,34 @@ int main(int argc, char *argv[])
           continue;
         }
 
-        strcpy(kv_store[kv_count].key, key);
-        strcpy(kv_store[kv_count].value, value);
+        int found = 0;
 
-        kv_count++;
+        for (int i = 0; i < kv_count; i++)
+        {
+          if (strcmp(kv_store[i].key, key) == 0)
+          {
+            strcpy(kv_store[i].value, value);
+            found = 1;
+            break;
+          }
+        }
+
+        if (!found)
+        {
+          if (kv_count >= 100)
+          {
+            send(client_sd,
+                 "ERROR: Store full\n",
+                 strlen("ERROR: Store full\n"),
+                 0);
+            continue;
+          }
+
+          strcpy(kv_store[kv_count].key, key);
+          strcpy(kv_store[kv_count].value, value);
+
+          kv_count++;
+        }
 
         send(client_sd, "OK\n", strlen("OK\n"), 0);
       }
@@ -102,6 +126,12 @@ int main(int argc, char *argv[])
 
       else if (strcmp(cmd, "GET") == 0)
       {
+        if (key == NULL)
+        {
+          send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
+          continue;
+        }
+
         int found = 0;
 
         for (int i = 0; i < kv_count; i++)
@@ -132,13 +162,33 @@ int main(int argc, char *argv[])
                strlen("NOT FOUND\n"),
                0);
         }
-        if (key == NULL)
+      }
+      else if (strcmp(cmd, "DEL") == 0)
+      {
+        int found = 0;
+
+        for (int i = 0; i < kv_count; i++)
         {
-          send(client_sd, "ERROR\n", strlen("ERROR\n"), 0);
-          continue;
+          if (strcmp(kv_store[i].key, key) == 0)
+          {
+            for (int j = i; j < kv_count - 1; j++)
+            {
+              kv_store[j] = kv_store[j + 1];
+            }
+            kv_count--;
+            found = 1;
+            break;
+          }
         }
 
-        send(client_sd, "NOT FOUND\n", strlen("NOT FOUND\n"), 0);
+        if (found)
+        {
+          send(client_sd, "OK\n", strlen("OK\n"), 0);
+        }
+        else
+        {
+          send(client_sd, "NOT FOUND\n", strlen("NOT FOUND\n"), 0);
+        }
       }
       else
       {
